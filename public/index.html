@@ -286,6 +286,10 @@ nav {
 .src-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .src-name { font-size: 13px; color: var(--text2); flex: 1; }
 .src-count { font-size: 11px; color: var(--text3); }
+.src-status { font-size: 10px; padding: 2px 6px; border-radius: 999px; border: 1px solid var(--border2); }
+.src-status.ok { color: #2ecc71; border-color: rgba(46,204,113,.35); background: rgba(46,204,113,.08); }
+.src-status.fail { color: #ff7b72; border-color: rgba(255,123,114,.35); background: rgba(255,123,114,.08); }
+.src-status.unknown { color: var(--text3); }
 
 
 .load-more-wrap { margin-top: 1rem; display: flex; justify-content: center; }
@@ -626,6 +630,14 @@ const SOURCES = [
   { name: 'Bureau Veritas Marine', url: 'https://marine-offshore.bureauveritas.com/newsroom', tag: 'policy', color: '#A93226', on: true },
   { name: 'Windpower Monthly', url: 'https://www.windpowermonthly.com/news/rss', tag: 'energy', color: '#16A085', on: true },
   { name: 'TED Maritime Tenders', url: 'ted://maritime', tag: 'orders', color: '#C97A1E', on: true },
+  { name: 'Marineschepen.nl', url: 'https://marineschepen.nl/nieuws/', tag: 'news', color: '#4D6FB3', on: true },
+  { name: 'Windassist', url: 'https://windassist.nl/feed', tag: 'energy', color: '#45B39D', on: true },
+  { name: 'Scheepspost', url: 'https://scheepspost.info/feed', tag: 'news', color: '#F39C12', on: true },
+  { name: 'Vaart.nl', url: 'https://www.vaart.nl/Handlers/RSS.ashx?rss=VaartNieuws&categorieID=1000000030', tag: 'news', color: '#5D6D7E', on: true },
+  { name: 'Offshore Energy – Middle East', url: 'https://www.offshore-energy.biz/region/middle-east/', tag: 'energy', color: '#8E44AD', on: true },
+  { name: 'Splash247', url: 'https://splash247.com/feed/', tag: 'news', color: '#3498DB', on: true },
+  { name: 'Middle East Construction News', url: 'https://meconstructionnews.com/feed/', tag: 'news', color: '#AF601A', on: true },
+  { name: 'GlobalTenders Middle East Marine', url: 'https://www.globaltenders.com/middle-east/me-marine-tenders', tag: 'orders', color: '#B9770E', on: true },
 ];
 
 // ── STATE ─────────────────────────────────────────────────────────────
@@ -635,6 +647,7 @@ let selectedIds = new Set();
 let feedFilter = 'alle';
 let customFeeds = JSON.parse(localStorage.getItem('customFeeds') || '[]');
 let sourceStates = JSON.parse(localStorage.getItem('sourceStates') || '{}');
+let sourceLoadStatus = [];
 let searchQuery = '';
 let allEvents = [];
 const PAGE_SIZE = 100;
@@ -700,18 +713,22 @@ async function loadFeeds() {
     feedVisibleCount = PAGE_SIZE;
 
     if (BASE_URL) {
-      // Production: use backend API
       const r = await fetch(`${BASE_URL}/api/feeds`);
       const d = await r.json();
       articles = d.articles || [];
+      sourceLoadStatus = d.sourceStatus || [];
     } else {
-      // Local / no backend: fetch RSS directly via allorigins.win proxy
       const allSources = [...SOURCES, ...customFeeds].filter(s => sourceStates[s.name] !== false && s.on !== false);
-      const results = await Promise.allSettled(
-        allSources.map(s => fetchRSS(s))
-      );
+      const results = await Promise.allSettled(allSources.map(s => fetchRSS(s)));
       articles = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
       articles.sort((a, b) => b.ts - a.ts);
+      sourceLoadStatus = allSources.map((s, idx) => ({
+        source: s.name,
+        url: s.url,
+        ok: results[idx]?.status === 'fulfilled' && (results[idx].value?.length || 0) > 0,
+        count: results[idx]?.status === 'fulfilled' ? (results[idx].value?.length || 0) : 0,
+        error: results[idx]?.status === 'rejected' ? (results[idx].reason?.message || 'Fout') : ((results[idx].value?.length || 0) ? '' : 'Geen artikelen gevonden')
+      }));
     }
 
     // Filter by active sources
@@ -1052,13 +1069,22 @@ function setFeedFilter(f, el) {
 function renderSidebarSources() {
   const counts = {};
   allArticles.forEach(a => { counts[a.source] = (counts[a.source] || 0) + 1; });
+  const statusMap = Object.fromEntries((sourceLoadStatus || []).map(s => [s.source, s]));
   const activeSources = [...SOURCES, ...customFeeds].filter(s => sourceStates[s.name] !== false);
-  document.getElementById('sidebar-sources').innerHTML = activeSources.map(s => `
-    <div class="source-pill">
+  document.getElementById('sidebar-sources').innerHTML = activeSources.map(s => {
+    const st = statusMap[s.name];
+    const badgeClass = !st ? 'unknown' : (st.ok ? 'ok' : 'fail');
+    const badgeText = !st ? 'onbekend' : (st.ok ? 'geladen' : 'falen');
+    const count = st ? st.count : (counts[s.name] || 0);
+    const title = st && st.error ? ` title="${st.error.replace(/"/g, '&quot;')}"` : '';
+    return `
+    <div class="source-pill"${title}>
       <div class="src-dot" style="background:${s.color}"></div>
       <span class="src-name">${s.name}</span>
-      <span class="src-count">${counts[s.name] || 0} art.</span>
-    </div>`).join('');
+      <span class="src-count">${count || 0} art.</span>
+      <span class="src-status ${badgeClass}">${badgeText}</span>
+    </div>`;
+  }).join('');
 }
 
 // ── ARTICLE SELECTION ─────────────────────────────────────────────────
