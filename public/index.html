@@ -483,25 +483,8 @@ nav {
       <!-- Events sidebar -->
       <div class="sidebar-card">
         <div class="sidebar-title">Agenda & beurzen</div>
-        <div class="event-row">
-          <div class="event-date-box"><div class="event-day">5</div><div class="event-mon">Mei</div></div>
-          <div class="event-info"><div class="event-name">Nor-Shipping 2025</div><div class="event-loc">Oslo, Noorwegen</div></div>
-        </div>
-        <div class="event-row">
-          <div class="event-date-box"><div class="event-day">12</div><div class="event-mon">Jun</div></div>
-          <div class="event-info"><div class="event-name">Europort Tech Summit</div><div class="event-loc">Rotterdam, NL</div></div>
-        </div>
-        <div class="event-row">
-          <div class="event-date-box"><div class="event-day">3</div><div class="event-mon">Sep</div></div>
-          <div class="event-info"><div class="event-name">SMM Hamburg</div><div class="event-loc">Hamburg, Duitsland</div></div>
-        </div>
-        <div class="event-row">
-          <div class="event-date-box"><div class="event-day">14</div><div class="event-mon">Okt</div></div>
-          <div class="event-info"><div class="event-name">Offshore Energy Exhibition</div><div class="event-loc">Amsterdam, NL</div></div>
-        </div>
-        <div class="event-row">
-          <div class="event-date-box"><div class="event-day">4</div><div class="event-mon">Nov</div></div>
-          <div class="event-info"><div class="event-name">Europort 2025</div><div class="event-loc">Rotterdam, NL</div></div>
+        <div id="events-list">
+          <div class="loading-state" style="padding:1rem .25rem"><div class="spinner"></div><div class="loading-text">Agenda laden...</div></div>
         </div>
       </div>
 
@@ -610,7 +593,7 @@ nav {
 // When running locally: set BASE_URL to empty string ''
 // When deployed on Vercel: set to your Vercel URL e.g. 'https://scheepsbouw.vercel.app'
 // Or leave as '' and the portal uses fallback data + direct browser API calls
-const BASE_URL = '';
+const BASE_URL = window.location.origin;
 
 const SOURCES = [
   { name: 'The Maritime Executive', url: 'https://maritime-executive.com/rss/all', tag: 'news', color: '#4a9ed6', on: true },
@@ -639,6 +622,7 @@ let feedFilter = 'alle';
 let customFeeds = JSON.parse(localStorage.getItem('customFeeds') || '[]');
 let sourceStates = JSON.parse(localStorage.getItem('sourceStates') || '{}');
 let searchQuery = '';
+let allEvents = [];
 
 
 function syncSearchInputs() {
@@ -685,7 +669,7 @@ function init() {
 async function loadAll() {
   const btn = document.getElementById('refresh-btn');
   if (btn) btn.classList.add('spinning');
-  await Promise.all([loadFeeds(), loadMarketData()]);
+  await Promise.all([loadFeeds(), loadMarketData(), loadEvents()]);
   if (btn) btn.classList.remove('spinning');
 }
 
@@ -772,6 +756,70 @@ function buildArticle({ title, snippet = '', link = '', date, source }) {
     date: date.toISOString(),
     ts: date.getTime()
   };
+}
+
+function formatEventMonth(date) {
+  return date.toLocaleDateString('nl-NL', { month: 'short' }).replace('.', '');
+}
+
+function formatEventDateRange(start, end) {
+  const startDate = safeDate(start);
+  const endDate = safeDate(end || start);
+  const sameDay = startDate.toDateString() === endDate.toDateString();
+  if (sameDay) {
+    return startDate.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  return `${startDate.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })} – ${endDate.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+}
+
+async function loadEvents() {
+  const fallbackEvents = [
+    { title: 'Nor-Shipping', location: 'Lillestrøm / Oslo, Noorwegen', startDate: '2027-01-12', endDate: '2027-01-15', link: 'https://nor-shipping.com/', source: 'Curated fallback' },
+    { title: 'Posidonia', location: 'Athene, Griekenland', startDate: '2026-06-01', endDate: '2026-06-05', link: 'https://posidonia-events.com/', source: 'Curated fallback' },
+    { title: 'SMM Hamburg', location: 'Hamburg, Duitsland', startDate: '2026-09-01', endDate: '2026-09-04', link: 'https://www.smm-hamburg.com/', source: 'Curated fallback' },
+    { title: 'Offshore Energy Exhibition & Conference', location: 'Amsterdam, Nederland', startDate: '2026-11-24', endDate: '2026-11-25', link: 'https://www.offshore-energy.biz/offshore-energy-exhibition-conference/', source: 'Curated fallback' },
+    { title: 'Europort', location: 'Rotterdam, Nederland', startDate: '2027-11-02', endDate: '2027-11-05', link: 'https://www.europort.nl/', source: 'Curated fallback' }
+  ];
+
+  try {
+    const r = await fetch(`${BASE_URL}/api/events`);
+    if (!r.ok) throw new Error(`status ${r.status}`);
+    const d = await r.json();
+    allEvents = Array.isArray(d.events) && d.events.length ? d.events : fallbackEvents;
+  } catch (e) {
+    allEvents = fallbackEvents;
+  }
+  renderEvents();
+}
+
+function renderEvents() {
+  const now = new Date();
+  const upcoming = allEvents
+    .map(e => ({ ...e, ts: safeDate(e.startDate).getTime() }))
+    .filter(e => e.ts >= new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime())
+    .sort((a, b) => a.ts - b.ts)
+    .slice(0, 8);
+
+  const html = upcoming.length
+    ? upcoming.map(e => {
+        const start = safeDate(e.startDate);
+        const month = formatEventMonth(start);
+        const day = start.getDate();
+        const name = e.link
+          ? `<a href="${e.link}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">${e.title}</a>`
+          : e.title;
+        return `
+          <div class="event-row">
+            <div class="event-date-box"><div class="event-day">${day}</div><div class="event-mon">${month}</div></div>
+            <div class="event-info">
+              <div class="event-name">${name}</div>
+              <div class="event-loc">${e.location || 'Locatie volgt'} · ${formatEventDateRange(e.startDate, e.endDate)}</div>
+            </div>
+          </div>`;
+      }).join('')
+    : `<div class="empty-state" style="padding:1rem">Nog geen events gevonden.</div>`;
+
+  document.getElementById('events-list').innerHTML = html;
 }
 
 function parseRSS(xml, source) {
