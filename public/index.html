@@ -470,6 +470,10 @@ nav {
           Vernieuwen
         </button>
       </div>
+      <div class="filters" id="dashboard-filters" style="margin-bottom:1rem">
+        <input type="text" class="search-input" id="dash-search" placeholder="Zoek op onderwerp, bedrijf of naam..." oninput="updateSearch(this.value)"/>
+        <button class="filter-btn" type="button" onclick="clearSearch()">Wis zoekopdracht</button>
+      </div>
       <div id="dash-articles">
         <div class="loading-state"><div class="spinner"></div><div class="loading-text">Nieuws laden uit bronnen...</div></div>
       </div>
@@ -522,7 +526,8 @@ nav {
 <div class="page" id="page-feed">
 <div class="container">
   <div class="filters" id="feed-filters">
-    <input type="text" class="search-input" id="feed-search" placeholder="Zoek in alle artikelen..." oninput="renderFeed()"/>
+    <input type="text" class="search-input" id="feed-search" placeholder="Zoek op onderwerp, bedrijf of naam..." oninput="updateSearch(this.value)"/>
+    <button class="filter-btn" type="button" onclick="clearSearch()">Wis zoekopdracht</button>
     <button class="filter-btn active" onclick="setFeedFilter('alle',this)">Alle</button>
     <button class="filter-btn" onclick="setFeedFilter('news',this)">Nieuws</button>
     <button class="filter-btn" onclick="setFeedFilter('policy',this)">Regelgeving</button>
@@ -605,7 +610,7 @@ nav {
 // When running locally: set BASE_URL to empty string ''
 // When deployed on Vercel: set to your Vercel URL e.g. 'https://scheepsbouw.vercel.app'
 // Or leave as '' and the portal uses fallback data + direct browser API calls
-const BASE_URL = 'https://scheepsbouw-portal.vercel.app/';
+const BASE_URL = '';
 
 const SOURCES = [
   { name: 'The Maritime Executive', url: 'https://maritime-executive.com/rss/all', tag: 'news', color: '#4a9ed6', on: true },
@@ -615,6 +620,15 @@ const SOURCES = [
   { name: 'Safety4Sea', url: 'https://safety4sea.com/feed/', tag: 'safety', color: '#f0a830', on: true },
   { name: 'Ship Technology', url: 'https://www.ship-technology.com/feed/', tag: 'tech', color: '#a080e0', on: true },
   { name: 'Riviera Maritime', url: 'https://www.rivieramm.com/rss', tag: 'news', color: '#BA7517', on: true },
+  { name: 'MarineLink', url: 'https://www.marinelink.com/news/rss', tag: 'news', color: '#2E86C1', on: true },
+  { name: 'gCaptain', url: 'https://feeds.feedburner.com/gcaptain', tag: 'news', color: '#1F618D', on: true },
+  { name: 'Hellenic Shipping News', url: 'https://www.hellenicshippingnews.com/feed/', tag: 'news', color: '#117A65', on: true },
+  { name: 'Renewables Now', url: 'https://renewablesnow.com/news/rss/', tag: 'energy', color: '#27AE60', on: true },
+  { name: 'Port Technology International', url: 'https://www.porttechnology.org/feed/', tag: 'tech', color: '#8E44AD', on: true },
+  { name: 'Infomarine', url: 'https://infomarine.net/en/?format=feed&type=rss', tag: 'news', color: '#2874A6', on: true },
+  { name: 'Bureau Veritas Marine', url: 'https://marine-offshore.bureauveritas.com/newsroom', tag: 'policy', color: '#A93226', on: true },
+  { name: 'Windpower Monthly', url: 'https://www.windpowermonthly.com/news/rss', tag: 'energy', color: '#16A085', on: true },
+  { name: 'TED Maritime Tenders', url: 'ted://maritime', tag: 'orders', color: '#C97A1E', on: true },
 ];
 
 // ── STATE ─────────────────────────────────────────────────────────────
@@ -624,6 +638,35 @@ let selectedIds = new Set();
 let feedFilter = 'alle';
 let customFeeds = JSON.parse(localStorage.getItem('customFeeds') || '[]');
 let sourceStates = JSON.parse(localStorage.getItem('sourceStates') || '{}');
+let searchQuery = '';
+
+
+function syncSearchInputs() {
+  const dashInput = document.getElementById('dash-search');
+  const feedInput = document.getElementById('feed-search');
+  if (dashInput && dashInput.value !== searchQuery) dashInput.value = searchQuery;
+  if (feedInput && feedInput.value !== searchQuery) feedInput.value = searchQuery;
+}
+
+function updateSearch(value) {
+  searchQuery = (value || '').trim().toLowerCase();
+  syncSearchInputs();
+  renderDash();
+  renderFeed();
+}
+
+function clearSearch() {
+  updateSearch('');
+}
+
+function getFilteredArticles() {
+  return allArticles.filter(a => {
+    const matchesFilter = feedFilter === 'alle' || a.tag === feedFilter;
+    const haystack = [a.title, a.snippet, a.source].filter(Boolean).join(' ').toLowerCase();
+    const matchesSearch = !searchQuery || haystack.includes(searchQuery);
+    return matchesFilter && matchesSearch;
+  });
+}
 
 // ── INIT ──────────────────────────────────────────────────────────────
 function init() {
@@ -690,36 +733,87 @@ async function fetchRSS(source) {
   return parseRSS(d.contents || '', source);
 }
 
+function stripHtml(value = '') {
+  return value
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function safeDate(value) {
+  const date = value ? new Date(value) : new Date();
+  return Number.isNaN(date.getTime()) ? new Date() : date;
+}
+
+function getTagValue(block, tags) {
+  for (const tag of tags) {
+    const regex = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i');
+    const match = block.match(regex);
+    if (match?.[1]) return stripHtml(match[1]);
+  }
+  return '';
+}
+
+function buildArticle({ title, snippet = '', link = '', date, source }) {
+  return {
+    id: btoa(encodeURIComponent(link || title)).slice(0, 16),
+    title: title.slice(0, 130),
+    snippet,
+    link,
+    source: source.name,
+    tag: source.tag,
+    color: source.color,
+    date: date.toISOString(),
+    ts: date.getTime()
+  };
+}
+
 function parseRSS(xml, source) {
   const items = [];
-  const re = /<item>([\s\S]*?)<\/item>/g;
-  let m;
-  while ((m = re.exec(xml)) !== null) {
-    const block = m[1];
-    const get = tag => {
-      const r = block.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>|<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`));
-      return r ? (r[1] || r[2] || '').trim() : '';
-    };
-    const title = get('title').replace(/<[^>]+>/g,'');
-    const link  = get('link') || block.match(/<link>(.*?)<\/link>/)?.[1] || '';
-    const desc  = get('description').replace(/<[^>]+>/g,'').slice(0, 220);
-    const pub   = get('pubDate') || get('dc:date') || '';
-    const date  = pub ? new Date(pub) : new Date();
-    if (title.length > 5) {
-      items.push({
-        id: btoa(encodeURIComponent(link || title)).slice(0,16),
-        title: title.slice(0,130),
-        snippet: desc,
-        link,
-        source: source.name,
-        tag: source.tag,
-        color: source.color,
-        date: date.toISOString(),
-        ts: date.getTime()
-      });
+
+  if (/<item\b/i.test(xml)) {
+    const re = /<item\b[\s\S]*?<\/item>/gi;
+    let m;
+    while ((m = re.exec(xml)) !== null) {
+      const block = m[0];
+      const title = getTagValue(block, ['title']);
+      const desc = getTagValue(block, ['description', 'content:encoded']).slice(0, 220);
+      const pub = getTagValue(block, ['pubDate', 'dc:date', 'published', 'updated']);
+      const rawLink = block.match(/<link[^>]*>([\s\S]*?)<\/link>/i)?.[1] || block.match(/<guid[^>]*>([\s\S]*?)<\/guid>/i)?.[1] || '';
+      const link = stripHtml(rawLink);
+      if (title && link) items.push(buildArticle({ title, snippet: desc, link, date: safeDate(pub), source }));
+    }
+  } else if (/<entry\b/i.test(xml)) {
+    const re = /<entry\b[\s\S]*?<\/entry>/gi;
+    let m;
+    while ((m = re.exec(xml)) !== null) {
+      const block = m[0];
+      const title = getTagValue(block, ['title']);
+      const desc = getTagValue(block, ['summary', 'content']).slice(0, 220);
+      const pub = getTagValue(block, ['updated', 'published']);
+      const link = block.match(/<link[^>]*href=["']([^"']+)["'][^>]*\/?/i)?.[1] || '';
+      if (title && link) items.push(buildArticle({ title, snippet: desc, link, date: safeDate(pub), source }));
+    }
+  } else if (source.name === 'Bureau Veritas Marine') {
+    const re = /<a[^>]*href="([^"]*\/newsroom\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+    let m;
+    const seen = new Set();
+    while ((m = re.exec(xml)) !== null) {
+      const link = m[1].startsWith('http') ? m[1] : `https://marine-offshore.bureauveritas.com${m[1]}`;
+      const title = stripHtml(m[2]).replace(/\s+Read More$/i, '').trim();
+      if (!title || title.length < 8 || seen.has(link)) continue;
+      seen.add(link);
+      items.push(buildArticle({ title, link, date: new Date(), source }));
     }
   }
-  return items.slice(0, 100);
+
+  return items.sort((a, b) => b.ts - a.ts).slice(0, 20);
 }
 
 // ── MARKET DATA ───────────────────────────────────────────────────────
@@ -834,23 +928,24 @@ function tagLabel(t) {
 }
 
 function renderDash() {
-  const recent = allArticles.slice(0, 20);
+  syncSearchInputs();
+  const filtered = allArticles.filter(a => {
+    const haystack = [a.title, a.snippet, a.source].filter(Boolean).join(' ').toLowerCase();
+    return !searchQuery || haystack.includes(searchQuery);
+  });
+  const recent = filtered.slice(0, 20);
   document.getElementById('dash-count').textContent = recent.length;
   document.getElementById('dash-articles').innerHTML =
     recent.length ? recent.map(a => articleHTML(a)).join('') :
-    '<div class="empty-state">Geen artikelen geladen. Controleer de bronnen of vernieuw de pagina.</div>';
+    `<div class="empty-state">Geen artikelen gevonden${searchQuery ? ` voor "${searchQuery}"` : ''}.</div>`;
 }
 
 function renderFeed() {
-  const q = document.getElementById('feed-search')?.value.toLowerCase() || '';
-  const filtered = allArticles.filter(a => {
-    const mf = feedFilter === 'alle' || a.tag === feedFilter;
-    const ms = !q || a.title.toLowerCase().includes(q) || a.snippet?.toLowerCase().includes(q) || a.source.toLowerCase().includes(q);
-    return mf && ms;
-  });
+  syncSearchInputs();
+  const filtered = getFilteredArticles();
   document.getElementById('feed-articles').innerHTML =
     filtered.length ? filtered.map(a => articleHTML(a)).join('') :
-    '<div class="empty-state">Geen artikelen gevonden voor deze filter.</div>';
+    `<div class="empty-state">Geen artikelen gevonden${searchQuery ? ` voor "${searchQuery}"` : ''}.</div>`;
 }
 
 function setFeedFilter(f, el) {
