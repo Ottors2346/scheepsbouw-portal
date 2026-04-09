@@ -184,7 +184,7 @@ async function fetchTedMaritimeNotices(source) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'User-Agent': 'ScheepsbouwPortal/1.0'
+      'User-Agent': 'MaritimeInformationPortal/1.0'
     },
     body: JSON.stringify(payload)
   });
@@ -225,7 +225,7 @@ function parseFeedResponse(body, source) {
   return items
     .filter(item => item.title && item.link)
     .sort((a, b) => b.ts - a.ts)
-    .slice(0, 20);
+    ;
 }
 
 export default async function handler(req, res) {
@@ -243,7 +243,7 @@ export default async function handler(req, res) {
         }
         const r = await fetch(source.url, {
           signal: controller.signal,
-          headers: { 'User-Agent': 'ScheepsbouwPortal/1.0' }
+          headers: { 'User-Agent': 'MaritimeInformationPortal/1.0' }
         });
         clearTimeout(timeout);
         const xml = await r.text();
