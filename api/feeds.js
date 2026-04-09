@@ -19,6 +19,14 @@ const FEEDS = [
   { name: 'Bureau Veritas Marine', url: 'https://marine-offshore.bureauveritas.com/newsroom', tag: 'policy', color: '#A93226' },
   { name: 'Windpower Monthly', url: 'https://www.windpowermonthly.com/news/rss', tag: 'energy', color: '#16A085' },
   { name: 'TED Maritime Tenders', url: 'ted://maritime', tag: 'orders', color: '#C97A1E' },
+  { name: 'Marineschepen.nl', url: 'https://marineschepen.nl/nieuws/', tag: 'news', color: '#4D6FB3' },
+  { name: 'Windassist', url: 'https://windassist.nl/feed', tag: 'energy', color: '#45B39D' },
+  { name: 'Scheepspost', url: 'https://scheepspost.info/feed', tag: 'news', color: '#F39C12' },
+  { name: 'Vaart.nl', url: 'https://www.vaart.nl/Handlers/RSS.ashx?rss=VaartNieuws&categorieID=1000000030', tag: 'news', color: '#5D6D7E' },
+  { name: 'Offshore Energy – Middle East', url: 'https://www.offshore-energy.biz/region/middle-east/', tag: 'energy', color: '#8E44AD' },
+  { name: 'Splash247', url: 'https://splash247.com/feed/', tag: 'news', color: '#3498DB' },
+  { name: 'Middle East Construction News', url: 'https://meconstructionnews.com/feed/', tag: 'news', color: '#AF601A' },
+  { name: 'GlobalTenders Middle East Marine', url: 'https://www.globaltenders.com/middle-east/me-marine-tenders', tag: 'orders', color: '#B9770E' },
 ];
 
 function stripHtml(value = '') {
@@ -105,29 +113,105 @@ function parseAtomItems(xml, source) {
   return items;
 }
 
+
+function parseDateLoose(value = '') {
+  const cleaned = stripHtml(value).replace(/\s+/g, ' ').trim();
+  if (!cleaned) return new Date();
+  const direct = new Date(cleaned);
+  if (!Number.isNaN(direct.getTime())) return direct;
+  const short = cleaned.match(/(\d{1,2})\s+([A-Za-z]{3,9})\s+(\d{2,4})/);
+  if (short) {
+    const d = new Date(`${short[1]} ${short[2]} ${short[3]}`);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  return new Date();
+}
+
+function makeItem({ title, snippet = '', link = '', source, date = new Date() }) {
+  const parsedDate = safeDate(date instanceof Date ? date.toISOString() : date);
+  return {
+    id: Buffer.from(link || title).toString('base64').slice(0, 16),
+    title: stripHtml(title).slice(0, 120),
+    snippet: stripHtml(snippet).slice(0, 220),
+    link,
+    source: source.name,
+    tag: source.tag,
+    color: source.color,
+    date: parsedDate.toISOString(),
+    ts: parsedDate.getTime()
+  };
+}
+
+function absoluteUrl(base, href = '') {
+  if (!href) return '';
+  try {
+    return new URL(href, base).toString();
+  } catch {
+    return href;
+  }
+}
+
 function parseHtmlCards(html, source) {
   const items = [];
+  const seen = new Set();
+
+  const pushItem = ({ title, link, snippet = '', date = new Date() }) => {
+    const absLink = absoluteUrl(source.url, link);
+    if (!title || !absLink || seen.has(absLink)) return;
+    seen.add(absLink);
+    items.push(makeItem({ title, snippet, link: absLink, source, date }));
+  };
 
   if (source.name === 'Bureau Veritas Marine') {
     const articleRegex = /<a[^>]*href="([^"]*\/newsroom\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
     let match;
-    const seen = new Set();
     while ((match = articleRegex.exec(html)) !== null) {
-      const link = match[1].startsWith('http') ? match[1] : `https://marine-offshore.bureauveritas.com${match[1]}`;
-      const title = stripHtml(match[2]).replace(/\s+Read More$/i, '').trim();
-      if (!title || title.length < 8 || seen.has(link)) continue;
-      seen.add(link);
-      items.push({
-        id: Buffer.from(link || title).toString('base64').slice(0, 16),
-        title: title.slice(0, 120),
-        snippet: '',
-        link,
-        source: source.name,
-        tag: source.tag,
-        color: source.color,
-        date: new Date().toISOString(),
-        ts: Date.now()
-      });
+      pushItem({ title: match[2], link: match[1] });
+    }
+  }
+
+  if (source.name === 'Marineschepen.nl') {
+    const articleRegex = /<a[^>]*href="([^"]*\.html)"[^>]*>([\s\S]*?)<\/a>/gi;
+    let match;
+    while ((match = articleRegex.exec(html)) !== null) {
+      const title = stripHtml(match[2]).replace(/\s+/g, ' ').trim();
+      if (title.length >= 10) pushItem({ title, link: match[1] });
+    }
+  }
+
+  if (source.name === 'Offshore Energy – Middle East') {
+    const cardRegex = /<a[^>]*href="([^"]+)"[^>]*>([\s\S]{0,1200}?)<\/a>/gi;
+    let match;
+    while ((match = cardRegex.exec(html)) !== null) {
+      const chunk = match[2];
+      const titleMatch = chunk.match(/<h[23][^>]*>([\s\S]*?)<\/h[23]>/i) || chunk.match(/title="([^"]+)"/i);
+      const dateMatch = chunk.match(/(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/i);
+      const title = stripHtml(titleMatch?.[1] || '');
+      if (title.length >= 10) pushItem({ title, link: match[1], date: parseDateLoose(dateMatch?.[1] || '') });
+    }
+  }
+
+  if (source.name === 'GlobalTenders Middle East Marine') {
+    const plain = stripHtml(html)
+      .replace(/\s+/g, ' ')
+      .replace(/View Detail/g, '\nView Detail\n')
+      .replace(/posting date/g, '\nposting date ')
+      .replace(/deadline/g, ' deadline ');
+    const titleMatches = [...plain.matchAll(/\n?([A-Z0-9][A-Za-z0-9/&(),.'’\-\s]{15,180}?)\s+(?:Turkey|Saudi Arabia|Oman|United Arab Emirates|Egypt|Jordan|Cyprus|Qatar|Bahrain|Kuwait|Iran|Iraq|Israel|Lebanon|Syria|Yemen)\s+\d{2}\s+[A-Za-z]{3}\s+\d{4}/g)];
+    const dateMatches = [...plain.matchAll(/posting date\s*(\d{2}\s+[A-Za-z]{3}\s+\d{4})/gi)];
+    for (let i = 0; i < Math.min(titleMatches.length, 20); i++) {
+      const title = stripHtml(titleMatches[i][1]);
+      const date = dateMatches[i]?.[1] || '';
+      pushItem({ title, link: source.url + `#notice-${i + 1}`, snippet: 'Tenderlisting uit GlobalTenders Middle East Marine.', date: parseDateLoose(date) });
+    }
+  }
+
+  if (source.name === 'Middle East Construction News') {
+    const linkRegex = /<a[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi;
+    let match;
+    while ((match = linkRegex.exec(html)) !== null) {
+      const title = stripHtml(match[2]);
+      if (title.length >= 12) pushItem({ title, link: match[1] });
     }
   }
 
@@ -232,32 +316,52 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 's-maxage=1800, stale-while-revalidate');
 
-  const results = await Promise.allSettled(
+  const results = await Promise.all(
     FEEDS.map(async (source) => {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), source.url.startsWith('ted://') ? 10000 : 6000);
+      const timeout = setTimeout(() => controller.abort(), source.url.startsWith('ted://') ? 12000 : 8000);
       try {
+        let articles = [];
         if (source.url.startsWith('ted://')) {
           clearTimeout(timeout);
-          return await fetchTedMaritimeNotices(source);
+          articles = await fetchTedMaritimeNotices(source);
+        } else {
+          const r = await fetch(source.url, {
+            signal: controller.signal,
+            headers: { 'User-Agent': 'MaritimeInformationPortal/1.0' }
+          });
+          clearTimeout(timeout);
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          const body = await r.text();
+          articles = parseFeedResponse(body, source);
         }
-        const r = await fetch(source.url, {
-          signal: controller.signal,
-          headers: { 'User-Agent': 'MaritimeInformationPortal/1.0' }
-        });
+        return {
+          source: source.name,
+          url: source.url,
+          ok: articles.length > 0,
+          count: articles.length,
+          error: articles.length ? '' : 'Geen artikelen gevonden',
+          articles
+        };
+      } catch (error) {
         clearTimeout(timeout);
-        const xml = await r.text();
-        return parseFeedResponse(xml, source);
-      } catch {
-        clearTimeout(timeout);
-        return [];
+        return {
+          source: source.name,
+          url: source.url,
+          ok: false,
+          count: 0,
+          error: error?.name === 'AbortError' ? 'Timeout' : (error?.message || 'Onbekende fout'),
+          articles: []
+        };
       }
     })
   );
 
   const articles = results
-    .flatMap(r => r.status === 'fulfilled' ? r.value : [])
+    .flatMap(r => r.articles)
     .sort((a, b) => b.ts - a.ts);
 
-  res.json({ articles, updated: new Date().toISOString() });
+  const sourceStatus = results.map(({ source, url, ok, count, error }) => ({ source, url, ok, count, error }));
+
+  res.json({ articles, sourceStatus, updated: new Date().toISOString() });
 }
