@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Scheepsbouw Markt Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --navy: #0a1628;
+  --navy2: #112240;
+  --navy3: #1d3461;
+  --steel: #2d6a9f;
+  --steel-light: #4a9ed6;
+  --accent: #e8a020;
+  --accent2: #f0c060;
+  --water: #c8e6f5;
+  --text: #e8edf2;
+  --text2: #9fb3c8;
+  --text3: #6b8299;
+  --surface: rgba(255,255,255,0.05);
+  --surface2: rgba(255,255,255,0.09);
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.15);
+  --green: #2ecc71; --green-bg: rgba(46,204,113,0.12);
+  --red: #e74c3c;   --red-bg: rgba(231,76,60,0.12);
+  --amber: #f39c12; --amber-bg: rgba(243,156,18,0.12);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--navy);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Subtle grid background */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(74,158,214,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(74,158,214,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Header ─────────────────────────────────────── */
+header {
+  background: var(--navy2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  position: sticky; top: 0; z-index: 100;
+}
+.header-inner {
+  max-width: 1400px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 60px; gap: 2rem;
+}
+.logo {
+  display: flex; align-items: center; gap: 12px;
+  font-family: 'DM Serif Display', serif;
+  font-size: 18px; color: var(--text); letter-spacing: -0.01em;
+}
+.logo-icon {
+  width: 32px; height: 32px;
+  background: var(--steel);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+.logo span { color: var(--accent); }
+.header-meta {
+  font-size: 12px; color: var(--text3);
+  display: flex; align-items: center; gap: 1rem;
+}
+.live-dot {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--green); font-weight: 500;
+}
+.live-dot::before {
+  content: '';
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ── Nav ────────────────────────────────────────── */
+nav {
+  background: var(--navy2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+}
+.nav-inner {
+  max-width: 1400px; margin: 0 auto;
+  display: flex; gap: 0;
+}
+.nav-tab {
+  padding: 12px 20px;
+  font-size: 13px; font-weight: 400;
+  color: var(--text3); background: none; border: none;
+  cursor: pointer; border-bottom: 2px solid transparent;
+  transition: all .15s; white-space: nowrap;
+}
+.nav-tab:hover { color: var(--text2); }
+.nav-tab.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 500; }
+
+/* ── Layout ─────────────────────────────────────── */
+.page { display: none; }
+.page.active { display: block; }
+.container { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem; position: relative; z-index: 1; }
+
+/* ── Market ticker ──────────────────────────────── */
+.ticker-bar {
+  background: var(--navy2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  overflow: hidden;
+}
+.ticker-inner {
+  max-width: 1400px; margin: 0 auto;
+  display: flex; align-items: center; gap: 2rem;
+  height: 36px; overflow-x: auto;
+}
+.ticker-inner::-webkit-scrollbar { display: none; }
+.ticker-item {
+  display: flex; align-items: center; gap: 8px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.ticker-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; }
+.ticker-val { font-size: 13px; font-weight: 500; color: var(--text); }
+.ticker-chg { font-size: 11px; }
+.ticker-chg.pos { color: var(--green); }
+.ticker-chg.neg { color: var(--red); }
+.ticker-chg.neu { color: var(--text3); }
+.ticker-divider { width: 1px; height: 16px; background: var(--border); flex-shrink: 0; }
+.ticker-loading { font-size: 12px; color: var(--text3); font-style: italic; }
+.demo-tag { font-size: 10px; color: var(--text3); background: var(--surface); padding: 1px 5px; border-radius: 4px; margin-left: 3px; }
+
+/* ── Metrics grid ───────────────────────────────── */
+.metrics-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 12px; margin-bottom: 1.5rem;
+}
+@media(max-width:900px) { .metrics-grid { grid-template-columns: repeat(2,1fr); } }
+.metric-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.125rem 1.25rem;
+  transition: border-color .2s;
+}
+.metric-card:hover { border-color: var(--border2); }
+.metric-lbl { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px; }
+.metric-val { font-size: 22px; font-weight: 300; color: var(--text); line-height: 1; margin-bottom: 6px; font-family: 'DM Serif Display', serif; }
+.metric-chg { font-size: 12px; display: flex; align-items: center; gap: 4px; }
+.metric-unit { font-size: 12px; color: var(--text3); margin-left: 4px; }
+.pos { color: var(--green); }
+.neg { color: var(--red); }
+.neu { color: var(--text3); }
+
+/* ── Two-column layout ──────────────────────────── */
+.two-col { display: grid; grid-template-columns: 1fr 360px; gap: 1.25rem; }
+@media(max-width:1100px) { .two-col { grid-template-columns: 1fr; } }
+
+/* ── Section header ─────────────────────────────── */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1rem;
+}
+.section-title {
+  font-size: 13px; font-weight: 500; color: var(--text2);
+  text-transform: uppercase; letter-spacing: .06em;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-count {
+  background: var(--surface2); border-radius: 20px;
+  padding: 1px 8px; font-size: 11px; color: var(--text3);
+}
+
+/* ── Filters ────────────────────────────────────── */
+.filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem; align-items: center; }
+.search-input {
+  flex: 1; min-width: 200px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 7px 12px;
+  font-size: 13px; color: var(--text); outline: none;
+  font-family: 'DM Sans', sans-serif;
+  transition: border-color .15s;
+}
+.search-input::placeholder { color: var(--text3); }
+.search-input:focus { border-color: var(--steel); }
+.filter-btn {
+  font-size: 12px; padding: 5px 13px;
+  border: 1px solid var(--border); border-radius: 20px;
+  background: none; color: var(--text3); cursor: pointer;
+  transition: all .15s; white-space: nowrap;
+}
+.filter-btn:hover { border-color: var(--border2); color: var(--text2); }
+.filter-btn.active { background: var(--steel); border-color: var(--steel); color: #fff; }
+
+/* ── Article cards ──────────────────────────────── */
+.article-list { display: flex; flex-direction: column; gap: 10px; }
+.article-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1rem 1.125rem;
+  cursor: default; transition: all .2s;
+  position: relative;
+}
+.article-card:hover { border-color: var(--border2); background: var(--surface2); }
+.article-card.selected { border-color: var(--accent); }
+.article-card.selected::before {
+  content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px; background: var(--accent);
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+.art-source-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 5px; flex-wrap: wrap;
+}
+.art-source { font-size: 11px; color: var(--text3); }
+.art-date { font-size: 11px; color: var(--text3); }
+.art-title {
+  font-size: 14px; font-weight: 500; color: var(--text);
+  line-height: 1.45; margin-bottom: 5px;
+}
+.art-title a { color: inherit; text-decoration: none; }
+.art-title a:hover { color: var(--steel-light); text-decoration: underline; }
+.art-snippet { font-size: 13px; color: var(--text3); line-height: 1.55; }
+.art-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.add-btn {
+  font-size: 12px; padding: 4px 12px;
+  border: 1px solid var(--steel); border-radius: 6px;
+  background: none; color: var(--steel-light); cursor: pointer;
+  transition: all .15s;
+}
+.add-btn:hover { background: rgba(74,158,214,0.15); }
+.add-btn.added { background: var(--accent-bg,rgba(232,160,32,0.12)); border-color: var(--accent); color: var(--accent); }
+.badge {
+  font-size: 10px; padding: 2px 8px; border-radius: 4px;
+  font-weight: 500; white-space: nowrap; text-transform: uppercase; letter-spacing: .04em;
+}
+.tag-news    { background: rgba(74,158,214,0.15); color: #4a9ed6; }
+.tag-policy  { background: rgba(231,76,60,0.15);  color: #e87060; }
+.tag-tech    { background: rgba(130,100,220,0.15); color: #a080e0; }
+.tag-energy  { background: rgba(46,204,113,0.15);  color: #2ecc71; }
+.tag-safety  { background: rgba(243,156,18,0.15);  color: #f0a830; }
+.tag-orders  { background: rgba(232,160,32,0.15);  color: var(--accent); }
+.tag-market  { background: rgba(255,255,255,0.08); color: var(--text2); }
+
+/* ── Sidebar ─────────────────────────────────────── */
+.sidebar-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1rem 1.125rem;
+  margin-bottom: 1rem;
+}
+.sidebar-title {
+  font-size: 12px; color: var(--text3); text-transform: uppercase;
+  letter-spacing: .06em; margin-bottom: .875rem; font-weight: 500;
+}
+.event-row {
+  display: flex; gap: 12px; padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.event-row:last-child { border-bottom: none; }
+.event-date-box {
+  background: var(--surface2); border-radius: 6px;
+  padding: 4px 8px; text-align: center; flex-shrink: 0; min-width: 40px;
+}
+.event-day { font-size: 16px; font-weight: 500; color: var(--text); line-height: 1; }
+.event-mon { font-size: 10px; color: var(--text3); text-transform: uppercase; }
+.event-info { flex: 1; }
+.event-name { font-size: 13px; color: var(--text); font-weight: 500; line-height: 1.3; }
+.event-loc { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.source-pill {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 0; border-bottom: 1px solid var(--border);
+}
+.source-pill:last-child { border-bottom: none; }
+.src-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.src-name { font-size: 13px; color: var(--text2); flex: 1; }
+.src-count { font-size: 11px; color: var(--text3); }
+
+/* ── Loading & error states ─────────────────────── */
+.loading-state {
+  display: flex; align-items: center; justify-content: center;
+  padding: 3rem; flex-direction: column; gap: 12px;
+}
+.spinner {
+  width: 28px; height: 28px; border: 2px solid var(--border);
+  border-top-color: var(--steel); border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 13px; color: var(--text3); }
+.error-state {
+  background: var(--red-bg); border: 1px solid rgba(231,76,60,0.2);
+  border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem;
+  font-size: 13px; color: #e87060;
+}
+.empty-state {
+  text-align: center; padding: 3rem; color: var(--text3); font-size: 13px;
+}
+
+/* ── Draft / Newsletter tab ──────────────────────── */
+.draft-area {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem;
+  margin-bottom: 1rem; min-height: 100px;
+}
+.draft-item {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: .875rem;
+  margin-bottom: .625rem; position: relative;
+}
+.draft-rm {
+  position: absolute; top: 8px; right: 10px;
+  border: none; background: none; color: var(--text3);
+  font-size: 16px; cursor: pointer; line-height: 1;
+}
+.draft-rm:hover { color: var(--red); }
+.option-row { display: flex; gap: 1.25rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.option-row label {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--text2); cursor: pointer;
+}
+.option-row input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; }
+.gen-btn {
+  display: block; width: 100%; padding: 13px;
+  background: var(--accent); color: var(--navy);
+  border: none; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 500; cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: background .15s;
+}
+.gen-btn:hover { background: var(--accent2); }
+.gen-btn:disabled { opacity: .5; cursor: not-allowed; }
+.newsletter-output {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.5rem;
+  margin-top: 1.25rem; font-size: 14px; line-height: 1.8;
+  color: var(--text); white-space: pre-wrap; display: none;
+}
+.copy-btn {
+  margin-top: .875rem; padding: 8px 18px;
+  border: 1px solid var(--border2); border-radius: var(--radius-sm);
+  background: none; color: var(--text2); cursor: pointer;
+  font-size: 13px; transition: all .15s; display: none;
+}
+.copy-btn:hover { background: var(--surface2); color: var(--text); }
+.api-warning {
+  background: rgba(243,156,18,0.1); border: 1px solid rgba(243,156,18,0.25);
+  border-radius: var(--radius-sm); padding: .875rem 1rem;
+  font-size: 13px; color: #f0c060; margin-bottom: 1rem; line-height: 1.55;
+}
+.api-warning a { color: var(--accent); }
+.field-label { font-size: 12px; color: var(--text3); margin-bottom: 5px; display: block; }
+.text-input {
+  width: 100%; padding: 9px 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 13px;
+  color: var(--text); outline: none; font-family: 'DM Sans', sans-serif;
+  margin-bottom: 1rem; transition: border-color .15s;
+}
+.text-input:focus { border-color: var(--steel); }
+.text-input::placeholder { color: var(--text3); }
+
+/* ── Sources management tab ─────────────────────── */
+.sources-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+@media(max-width:900px) { .sources-grid { grid-template-columns: 1fr; } }
+.source-row-manage {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid var(--border);
+}
+.source-row-manage:last-child { border-bottom: none; }
+.toggle {
+  width: 34px; height: 19px; border-radius: 10px;
+  background: var(--border); position: relative;
+  cursor: pointer; border: none; flex-shrink: 0; transition: background .2s;
+}
+.toggle.on { background: var(--steel); }
+.toggle::after {
+  content: ''; position: absolute;
+  width: 15px; height: 15px; border-radius: 50%;
+  background: #fff; top: 2px; left: 2px;
+  transition: left .2s; box-shadow: 0 1px 2px rgba(0,0,0,.3);
+}
+.toggle.on::after { left: 17px; }
+.src-manage-name { font-size: 13px; color: var(--text2); flex: 1; }
+.src-manage-url { font-size: 11px; color: var(--text3); }
+
+/* ── Responsive ─────────────────────────────────── */
+@media(max-width:700px) {
+  .container { padding: 1rem; }
+  header, nav, .ticker-bar { padding: 0 1rem; }
+  .header-meta { display: none; }
+}
+
+/* ── Refresh btn ────────────────────────────────── */
+.refresh-btn {
+  font-size: 12px; padding: 5px 12px;
+  border: 1px solid var(--border); border-radius: 20px;
+  background: none; color: var(--text3); cursor: pointer;
+  transition: all .15s; display: flex; align-items: center; gap: 5px;
+}
+.refresh-btn:hover { border-color: var(--border2); color: var(--text2); }
+.refresh-btn.spinning svg { animation: spin .7s linear infinite; }
+
+/* ── Updated label ──────────────────────────────── */
+.updated-label { font-size: 11px; color: var(--text3); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">⚓</div>
+      Scheepsbouw<span>Portal</span>
+    </div>
+    <div class="header-meta">
+      <span class="live-dot">Live data</span>
+      <span id="header-date"></span>
+      <span id="header-week"></span>
+    </div>
+  </div>
+</header>
+
+<div class="ticker-bar">
+  <div class="ticker-inner" id="ticker">
+    <span class="ticker-loading">Marktdata laden...</span>
+  </div>
+</div>
+
+<nav>
+  <div class="nav-inner">
+    <button class="nav-tab active" onclick="showPage('dashboard',this)">Dashboard</button>
+    <button class="nav-tab" onclick="showPage('feed',this)">Nieuwsfeed</button>
+    <button class="nav-tab" onclick="showPage('nieuwsbrief',this)">Nieuwsbrief</button>
+    <button class="nav-tab" onclick="showPage('bronnen',this)">Bronnen</button>
+  </div>
+</nav>
+
+<!-- ══ DASHBOARD ══════════════════════════════════════════════════════ -->
+<div class="page active" id="page-dashboard">
+<div class="container">
+
+  <div class="metrics-grid" id="metrics-grid">
+    <div class="metric-card"><div class="metric-lbl">Laden...</div><div class="metric-val">—</div></div>
+    <div class="metric-card"><div class="metric-lbl">Laden...</div><div class="metric-val">—</div></div>
+    <div class="metric-card"><div class="metric-lbl">Laden...</div><div class="metric-val">—</div></div>
+    <div class="metric-card"><div class="metric-lbl">Laden...</div><div class="metric-val">—</div></div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <div class="section-header">
+        <div class="section-title">
+          Laatste nieuws
+          <span class="section-count" id="dash-count">—</span>
+        </div>
+        <button class="refresh-btn" onclick="loadAll()" id="refresh-btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Vernieuwen
+        </button>
+      </div>
+      <div id="dash-articles">
+        <div class="loading-state"><div class="spinner"></div><div class="loading-text">Nieuws laden uit bronnen...</div></div>
+      </div>
+    </div>
+
+    <div>
+      <!-- Events sidebar -->
+      <div class="sidebar-card">
+        <div class="sidebar-title">Agenda & beurzen</div>
+        <div class="event-row">
+          <div class="event-date-box"><div class="event-day">5</div><div class="event-mon">Mei</div></div>
+          <div class="event-info"><div class="event-name">Nor-Shipping 2025</div><div class="event-loc">Oslo, Noorwegen</div></div>
+        </div>
+        <div class="event-row">
+          <div class="event-date-box"><div class="event-day">12</div><div class="event-mon">Jun</div></div>
+          <div class="event-info"><div class="event-name">Europort Tech Summit</div><div class="event-loc">Rotterdam, NL</div></div>
+        </div>
+        <div class="event-row">
+          <div class="event-date-box"><div class="event-day">3</div><div class="event-mon">Sep</div></div>
+          <div class="event-info"><div class="event-name">SMM Hamburg</div><div class="event-loc">Hamburg, Duitsland</div></div>
+        </div>
+        <div class="event-row">
+          <div class="event-date-box"><div class="event-day">14</div><div class="event-mon">Okt</div></div>
+          <div class="event-info"><div class="event-name">Offshore Energy Exhibition</div><div class="event-loc">Amsterdam, NL</div></div>
+        </div>
+        <div class="event-row">
+          <div class="event-date-box"><div class="event-day">4</div><div class="event-mon">Nov</div></div>
+          <div class="event-info"><div class="event-name">Europort 2025</div><div class="event-loc">Rotterdam, NL</div></div>
+        </div>
+      </div>
+
+      <!-- Active sources sidebar -->
+      <div class="sidebar-card">
+        <div class="sidebar-title">Actieve bronnen</div>
+        <div id="sidebar-sources"></div>
+      </div>
+
+      <!-- Quick newsletter CTA -->
+      <div class="sidebar-card" style="background: linear-gradient(135deg, rgba(45,106,159,0.2), rgba(232,160,32,0.1)); border-color: rgba(232,160,32,0.2);">
+        <div class="sidebar-title" style="color:var(--accent)">Nieuwsbrief</div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:.875rem;line-height:1.5">Selecteer artikelen en genereer direct een professionele wekelijkse update.</p>
+        <button class="gen-btn" style="padding:9px" onclick="showPage('nieuwsbrief', document.querySelector('.nav-tab:nth-child(3)'))">Naar nieuwsbrief →</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ FEED ════════════════════════════════════════════════════════════ -->
+<div class="page" id="page-feed">
+<div class="container">
+  <div class="filters" id="feed-filters">
+    <input type="text" class="search-input" id="feed-search" placeholder="Zoek in alle artikelen..." oninput="renderFeed()"/>
+    <button class="filter-btn active" onclick="setFeedFilter('alle',this)">Alle</button>
+    <button class="filter-btn" onclick="setFeedFilter('news',this)">Nieuws</button>
+    <button class="filter-btn" onclick="setFeedFilter('policy',this)">Regelgeving</button>
+    <button class="filter-btn" onclick="setFeedFilter('tech',this)">Technologie</button>
+    <button class="filter-btn" onclick="setFeedFilter('energy',this)">Energie</button>
+    <button class="filter-btn" onclick="setFeedFilter('safety',this)">Veiligheid</button>
+  </div>
+  <div id="feed-articles">
+    <div class="loading-state"><div class="spinner"></div><div class="loading-text">Artikelen laden...</div></div>
+  </div>
+</div>
+</div>
+
+<!-- ══ NIEUWSBRIEF ══════════════════════════════════════════════════════ -->
+<div class="page" id="page-nieuwsbrief">
+<div class="container" style="max-width:800px">
+
+  <div class="api-warning">
+    <strong>API-sleutel vereist voor AI-generatie.</strong> Vul hieronder je Anthropic API-sleutel in.
+    Aanmaken via <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> (gratis account, enkele centen per nieuwsbrief).
+    Je sleutel wordt <strong>niet</strong> opgeslagen of verstuurd naar andere servers.
+  </div>
+
+  <label class="field-label">Anthropic API-sleutel</label>
+  <input type="password" class="text-input" id="api-key" placeholder="sk-ant-..."/>
+
+  <div class="section-header" style="margin-bottom:.75rem">
+    <div class="section-title">Geselecteerde artikelen <span class="section-count" id="sel-count">0</span></div>
+    <span class="updated-label" id="sel-hint">Selecteer artikelen in de feed</span>
+  </div>
+
+  <div class="draft-area" id="draft-items">
+    <div class="empty-state" style="padding:1.5rem">Ga naar de <strong>Nieuwsfeed</strong> en klik op "Toevoegen" bij artikelen die je wil verwerken.</div>
+  </div>
+
+  <div style="font-size:12px;color:var(--text3);margin-bottom:.5rem;font-weight:500;text-transform:uppercase;letter-spacing:.05em">Secties</div>
+  <div class="option-row">
+    <label><input type="checkbox" id="inc-metrics" checked> Marktcijfers</label>
+    <label><input type="checkbox" id="inc-orders" checked> Orderboek analyse</label>
+    <label><input type="checkbox" id="inc-outlook" checked> Vooruitblik</label>
+  </div>
+
+  <button class="gen-btn" id="gen-btn" onclick="generateNewsletter()">Genereer nieuwsbrief met AI</button>
+  <div id="gen-loading" style="display:none;margin-top:.875rem;font-size:13px;color:var(--text3)">Nieuwsbrief wordt geschreven...</div>
+  <pre class="newsletter-output" id="newsletter-output"></pre>
+  <button class="copy-btn" id="copy-btn" onclick="copyNewsletter()">Kopieer nieuwsbrief</button>
+</div>
+</div>
+
+<!-- ══ BRONNEN ══════════════════════════════════════════════════════════ -->
+<div class="page" id="page-bronnen">
+<div class="container">
+  <div class="section-header" style="margin-bottom:1.25rem">
+    <div class="section-title">Bronbeheer</div>
+    <span class="updated-label">RSS-feeds worden automatisch elke 30 min ververst</span>
+  </div>
+  <div class="sources-grid" id="sources-grid"></div>
+
+  <div class="sidebar-card" style="margin-top:1rem;max-width:500px">
+    <div class="sidebar-title">Eigen RSS-feed toevoegen</div>
+    <label class="field-label" style="margin-top:.5rem">Naam</label>
+    <input type="text" class="text-input" id="new-name" placeholder="bijv. Damen Shipyards Blog" style="margin-bottom:.5rem"/>
+    <label class="field-label">RSS URL</label>
+    <input type="text" class="text-input" id="new-url" placeholder="https://example.com/feed.xml"/>
+    <label class="field-label">Categorie</label>
+    <select class="text-input" id="new-tag" style="margin-bottom:.875rem">
+      <option value="news">Nieuws</option>
+      <option value="tech">Technologie</option>
+      <option value="policy">Regelgeving</option>
+      <option value="energy">Energie</option>
+      <option value="safety">Veiligheid</option>
+    </select>
+    <button class="gen-btn" style="padding:9px" onclick="addCustomFeed()">Toevoegen</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────
+// When running locally: set BASE_URL to empty string ''
+// When deployed on Vercel: set to your Vercel URL e.g. 'https://scheepsbouw.vercel.app'
+// Or leave as '' and the portal uses fallback data + direct browser API calls
+const BASE_URL = '';
+
+const SOURCES = [
+  { name: 'The Maritime Executive', url: 'https://maritime-executive.com/rss/all', tag: 'news', color: '#4a9ed6', on: true },
+  { name: 'Offshore Energy', url: 'https://www.offshore-energy.biz/feed/', tag: 'energy', color: '#2ecc71', on: true },
+  { name: 'IMO Newsroom', url: 'https://www.imo.org/en/MediaCentre/PressBriefings/rss.xml', tag: 'policy', color: '#e87060', on: true },
+  { name: 'Seatrade Maritime', url: 'https://www.seatrade-maritime.com/rss.xml', tag: 'news', color: '#1D9E75', on: true },
+  { name: 'Safety4Sea', url: 'https://safety4sea.com/feed/', tag: 'safety', color: '#f0a830', on: true },
+  { name: 'Ship Technology', url: 'https://www.ship-technology.com/feed/', tag: 'tech', color: '#a080e0', on: true },
+  { name: 'Riviera Maritime', url: 'https://www.rivieramm.com/rss', tag: 'news', color: '#BA7517', on: true },
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────
+let allArticles = [];
+let marketData = {};
+let selectedIds = new Set();
+let feedFilter = 'alle';
+let customFeeds = JSON.parse(localStorage.getItem('customFeeds') || '[]');
+let sourceStates = JSON.parse(localStorage.getItem('sourceStates') || '{}');
+
+// ── INIT ──────────────────────────────────────────────────────────────
+function init() {
+  // Header date
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 1);
+  const wk = Math.ceil(((now - start) / 86400000 + start.getDay() + 1) / 7);
+  document.getElementById('header-date').textContent =
+    now.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
+  document.getElementById('header-week').textContent = `Week ${wk}`;
+
+  loadAll();
+  renderSourcesPage();
+}
+
+async function loadAll() {
+  const btn = document.getElementById('refresh-btn');
+  if (btn) btn.classList.add('spinning');
+  await Promise.all([loadFeeds(), loadMarketData()]);
+  if (btn) btn.classList.remove('spinning');
+}
+
+// ── FEEDS ─────────────────────────────────────────────────────────────
+async function loadFeeds() {
+  try {
+    let articles = [];
+
+    if (BASE_URL) {
+      // Production: use backend API
+      const r = await fetch(`${BASE_URL}/api/feeds`);
+      const d = await r.json();
+      articles = d.articles || [];
+    } else {
+      // Local / no backend: fetch RSS directly via allorigins.win proxy
+      const allSources = [...SOURCES, ...customFeeds].filter(s => sourceStates[s.name] !== false && s.on !== false);
+      const results = await Promise.allSettled(
+        allSources.map(s => fetchRSS(s))
+      );
+      articles = results.flatMap(r => r.status === 'fulfilled' ? r.value : []);
+      articles.sort((a, b) => b.ts - a.ts);
+    }
+
+    // Filter by active sources
+    const activeSources = [...SOURCES, ...customFeeds]
+      .filter(s => sourceStates[s.name] !== false)
+      .map(s => s.name);
+
+    allArticles = articles.filter(a => activeSources.includes(a.source) || BASE_URL);
+
+    renderDash();
+    renderFeed();
+    renderSidebarSources();
+  } catch (e) {
+    document.getElementById('dash-articles').innerHTML =
+      `<div class="error-state">Kon nieuws niet laden: ${e.message}. Controleer je internetverbinding.</div>`;
+  }
+}
+
+async function fetchRSS(source) {
+  // Use allorigins.win as CORS proxy for local use
+  const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(source.url)}`;
+  const r = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
+  const d = await r.json();
+  return parseRSS(d.contents || '', source);
+}
+
+function parseRSS(xml, source) {
+  const items = [];
+  const re = /<item>([\s\S]*?)<\/item>/g;
+  let m;
+  while ((m = re.exec(xml)) !== null) {
+    const block = m[1];
+    const get = tag => {
+      const r = block.match(new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>|<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`));
+      return r ? (r[1] || r[2] || '').trim() : '';
+    };
+    const title = get('title').replace(/<[^>]+>/g,'');
+    const link  = get('link') || block.match(/<link>(.*?)<\/link>/)?.[1] || '';
+    const desc  = get('description').replace(/<[^>]+>/g,'').slice(0, 220);
+    const pub   = get('pubDate') || get('dc:date') || '';
+    const date  = pub ? new Date(pub) : new Date();
+    if (title.length > 5) {
+      items.push({
+        id: btoa(encodeURIComponent(link || title)).slice(0,16),
+        title: title.slice(0,130),
+        snippet: desc,
+        link,
+        source: source.name,
+        tag: source.tag,
+        color: source.color,
+        date: date.toISOString(),
+        ts: date.getTime()
+      });
+    }
+  }
+  return items.slice(0, 10);
+}
+
+// ── MARKET DATA ───────────────────────────────────────────────────────
+async function loadMarketData() {
+  try {
+    if (BASE_URL) {
+      const r = await fetch(`${BASE_URL}/api/marketdata`);
+      marketData = await r.json();
+    } else {
+      // Fetch EUR/USD directly (no CORS issues)
+      const r = await fetch('https://api.frankfurter.app/latest?from=EUR&to=USD',
+        { signal: AbortSignal.timeout(5000) });
+      const d = await r.json();
+      marketData = {
+        eurusd: { value: d?.rates?.USD?.toFixed(3) || '1.082', demo: !d?.rates?.USD },
+        steel:  { value: 487, unit: '$/ton', change: -2.1, demo: true },
+        bunker: { vlsfo: 612, mgo: 748, unit: '$/mt', demo: true },
+        bdi:    { value: '1.842', change: 1.2, demo: true },
+        brent:  { value: '81.4', unit: '$/bbl', change: -0.8, demo: true },
+      };
+    }
+    renderMetrics();
+    renderTicker();
+  } catch {
+    marketData = {
+      eurusd: { value: '1.082', demo: true },
+      steel:  { value: 487, unit: '$/ton', change: -2.1, demo: true },
+      bunker: { vlsfo: 612, mgo: 748, unit: '$/mt', demo: true },
+      bdi:    { value: '1.842', change: 1.2, demo: true },
+      brent:  { value: '81.4', unit: '$/bbl', change: -0.8, demo: true },
+    };
+    renderMetrics();
+    renderTicker();
+  }
+}
+
+function renderMetrics() {
+  const md = marketData;
+  const demoNote = d => d ? '<span class="demo-tag">voorbeeld</span>' : '';
+  document.getElementById('metrics-grid').innerHTML = `
+    <div class="metric-card">
+      <div class="metric-lbl">VLSFO bunkerprijs ${demoNote(md.bunker?.demo)}</div>
+      <div class="metric-val">${md.bunker?.vlsfo ?? '—'}<span class="metric-unit">$/mt</span></div>
+      <div class="metric-chg neu">MGO: ${md.bunker?.mgo ?? '—'} $/mt</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-lbl">Brent crude ${demoNote(md.brent?.demo)}</div>
+      <div class="metric-val">${md.brent?.value ?? '—'}<span class="metric-unit">$/bbl</span></div>
+      <div class="metric-chg ${chgClass(md.brent?.change)}">${chgStr(md.brent?.change)}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-lbl">EUR/USD ${demoNote(md.eurusd?.demo)}</div>
+      <div class="metric-val">${md.eurusd?.value ?? '—'}</div>
+      <div class="metric-chg ${chgClass(md.eurusd?.change)}">${chgStr(md.eurusd?.change)}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-lbl">Baltic Dry Index ${demoNote(md.bdi?.demo)}</div>
+      <div class="metric-val">${md.bdi?.value ?? '—'}</div>
+      <div class="metric-chg ${chgClass(md.bdi?.change)}">${chgStr(md.bdi?.change)}</div>
+    </div>`;
+}
+
+function renderTicker() {
+  const md = marketData;
+  const items = [
+    { label: 'VLSFO', val: `${md.bunker?.vlsfo ?? '—'} $/mt`, chg: null },
+    { label: 'MGO', val: `${md.bunker?.mgo ?? '—'} $/mt`, chg: null },
+    { label: 'Brent', val: `${md.brent?.value ?? '—'} $/bbl`, chg: md.brent?.change },
+    { label: 'EUR/USD', val: md.eurusd?.value ?? '—', chg: md.eurusd?.change },
+    { label: 'Baltic Dry', val: md.bdi?.value ?? '—', chg: md.bdi?.change },
+    { label: 'Staalprijs', val: `${md.steel?.value ?? '—'} $/ton`, chg: md.steel?.change },
+  ];
+  document.getElementById('ticker').innerHTML = items.map((it, i) => `
+    ${i > 0 ? '<div class="ticker-divider"></div>' : ''}
+    <div class="ticker-item">
+      <span class="ticker-label">${it.label}</span>
+      <span class="ticker-val">${it.val}</span>
+      ${it.chg != null ? `<span class="ticker-chg ${chgClass(it.chg)}">${chgStr(it.chg)}</span>` : ''}
+    </div>`).join('');
+}
+
+function chgClass(v) { return v == null ? 'neu' : v > 0 ? 'pos' : v < 0 ? 'neg' : 'neu'; }
+function chgStr(v)   { return v == null ? '' : `${v > 0 ? '+' : ''}${v}%`; }
+
+// ── RENDER ARTICLES ───────────────────────────────────────────────────
+function articleHTML(a, showAdd = true) {
+  const sel = selectedIds.has(a.id);
+  const d = new Date(a.date);
+  const dateStr = isNaN(d) ? '' : d.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return `
+    <div class="article-card ${sel ? 'selected' : ''}" id="art-${a.id}">
+      <div class="art-source-row">
+        <span style="width:8px;height:8px;border-radius:50%;background:${a.color || '#4a9ed6'};display:inline-block;flex-shrink:0"></span>
+        <span class="art-source">${a.source}</span>
+        <span class="art-date">${dateStr}</span>
+        <span class="badge tag-${a.tag}">${tagLabel(a.tag)}</span>
+      </div>
+      <div class="art-title">
+        ${a.link ? `<a href="${a.link}" target="_blank" rel="noopener">${a.title}</a>` : a.title}
+      </div>
+      ${a.snippet ? `<div class="art-snippet">${a.snippet}${a.snippet.length >= 218 ? '…' : ''}</div>` : ''}
+      ${showAdd ? `<div class="art-footer">
+        <button class="add-btn ${sel ? 'added' : ''}" onclick="toggleArticle('${a.id}')">
+          ${sel ? '✓ Toegevoegd' : '+ Nieuwsbrief'}
+        </button>
+      </div>` : ''}
+    </div>`;
+}
+
+function tagLabel(t) {
+  return { news:'Nieuws', policy:'Regelgeving', tech:'Technologie', energy:'Energie', safety:'Veiligheid', orders:'Orders', market:'Markt' }[t] || t;
+}
+
+function renderDash() {
+  const recent = allArticles.slice(0, 20);
+  document.getElementById('dash-count').textContent = recent.length;
+  document.getElementById('dash-articles').innerHTML =
+    recent.length ? recent.map(a => articleHTML(a)).join('') :
+    '<div class="empty-state">Geen artikelen geladen. Controleer de bronnen of vernieuw de pagina.</div>';
+}
+
+function renderFeed() {
+  const q = document.getElementById('feed-search')?.value.toLowerCase() || '';
+  const filtered = allArticles.filter(a => {
+    const mf = feedFilter === 'alle' || a.tag === feedFilter;
+    const ms = !q || a.title.toLowerCase().includes(q) || a.snippet?.toLowerCase().includes(q) || a.source.toLowerCase().includes(q);
+    return mf && ms;
+  });
+  document.getElementById('feed-articles').innerHTML =
+    filtered.length ? filtered.map(a => articleHTML(a)).join('') :
+    '<div class="empty-state">Geen artikelen gevonden voor deze filter.</div>';
+}
+
+function setFeedFilter(f, el) {
+  feedFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderFeed();
+}
+
+function renderSidebarSources() {
+  const counts = {};
+  allArticles.forEach(a => { counts[a.source] = (counts[a.source] || 0) + 1; });
+  const activeSources = [...SOURCES, ...customFeeds].filter(s => sourceStates[s.name] !== false);
+  document.getElementById('sidebar-sources').innerHTML = activeSources.map(s => `
+    <div class="source-pill">
+      <div class="src-dot" style="background:${s.color}"></div>
+      <span class="src-name">${s.name}</span>
+      <span class="src-count">${counts[s.name] || 0} art.</span>
+    </div>`).join('');
+}
+
+// ── ARTICLE SELECTION ─────────────────────────────────────────────────
+function toggleArticle(id) {
+  if (selectedIds.has(id)) selectedIds.delete(id);
+  else selectedIds.add(id);
+  // Re-render both views to update buttons
+  renderDash();
+  renderFeed();
+  renderDraft();
+}
+
+function renderDraft() {
+  const sel = allArticles.filter(a => selectedIds.has(a.id));
+  document.getElementById('sel-count').textContent = sel.length;
+  document.getElementById('draft-items').innerHTML = sel.length
+    ? sel.map(a => `
+      <div class="draft-item">
+        <button class="draft-rm" onclick="toggleArticle('${a.id}')">✕</button>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">${a.source} · <span class="badge tag-${a.tag}">${tagLabel(a.tag)}</span></div>
+        <div style="font-size:14px;font-weight:500;margin-bottom:4px;color:var(--text)">${a.title}</div>
+        <div style="font-size:12px;color:var(--text3)">${a.snippet || ''}</div>
+      </div>`).join('')
+    : `<div class="empty-state" style="padding:1.5rem">Ga naar de <strong>Nieuwsfeed</strong> en klik op "+ Nieuwsbrief" bij artikelen.</div>`;
+}
+
+// ── NEWSLETTER GENERATION ─────────────────────────────────────────────
+async function generateNewsletter() {
+  const apiKey = document.getElementById('api-key').value.trim();
+  if (!apiKey) { alert('Vul eerst je Anthropic API-sleutel in.'); return; }
+
+  const sel = allArticles.filter(a => selectedIds.has(a.id));
+  if (!sel.length) { alert('Selecteer eerst artikelen in de feed.'); return; }
+
+  const btn = document.getElementById('gen-btn');
+  const loading = document.getElementById('gen-loading');
+  const output = document.getElementById('newsletter-output');
+  const copyBtn = document.getElementById('copy-btn');
+
+  btn.disabled = true;
+  loading.style.display = 'block';
+  output.style.display = 'none';
+  copyBtn.style.display = 'none';
+
+  const now = new Date();
+  const weekNum = Math.ceil(((now - new Date(now.getFullYear(),0,1))/86400000 + new Date(now.getFullYear(),0,1).getDay()+1)/7);
+  const artikelen = sel.map(a => `- ${a.title} (${a.source}): ${a.snippet}`).join('\n');
+  const opts = {
+    metrics: document.getElementById('inc-metrics').checked,
+    orders: document.getElementById('inc-orders').checked,
+    outlook: document.getElementById('inc-outlook').checked
+  };
+  const secties = [];
+  if (opts.metrics) secties.push(`Marktcijfers: VLSFO ${marketData.bunker?.vlsfo ?? 'n/b'} $/mt, Brent ${marketData.brent?.value ?? 'n/b'} $/bbl, EUR/USD ${marketData.eurusd?.value ?? 'n/b'}, Baltic Dry Index ${marketData.bdi?.value ?? 'n/b'}`);
+  if (opts.orders) secties.push('orderboek analyse');
+  if (opts.outlook) secties.push('vooruitblik komende week');
+
+  const prompt = `Je bent redacteur van een professionele wekelijkse scheepsbouw markt update nieuwsbrief.
+Week ${weekNum}, ${now.toLocaleDateString('nl-NL',{day:'numeric',month:'long',year:'numeric'})}.
+
+Schrijf een complete nieuwsbrief op basis van:
+${artikelen}
+${secties.length ? '\nNeem ook op: ' + secties.join('; ') : ''}
+
+Richtlijnen:
+- Schrijf professioneel Nederlands
+- Doelgroep: scheepsbouwers, werven, toeleveranciers, maritieme financiers, ingenieurs
+- Begin met een korte executive summary (3-4 zinnen)
+- Gebruik heldere kopjes per onderwerp
+- Sluit af met een redactionele noot / vooruitblik
+- Feitelijk maar leesbaar, geen herhaling
+- 400-600 woorden`;
+
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1500,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error.message);
+    output.textContent = d.content.map(b => b.text || '').join('');
+    output.style.display = 'block';
+    copyBtn.style.display = 'inline-block';
+  } catch (err) {
+    output.textContent = 'Fout bij genereren: ' + err.message;
+    output.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    loading.style.display = 'none';
+  }
+}
+
+function copyNewsletter() {
+  navigator.clipboard.writeText(document.getElementById('newsletter-output').textContent).then(() => {
+    const b = document.getElementById('copy-btn');
+    b.textContent = 'Gekopieerd!';
+    setTimeout(() => b.textContent = 'Kopieer nieuwsbrief', 2000);
+  });
+}
+
+// ── SOURCES MANAGEMENT ────────────────────────────────────────────────
+function renderSourcesPage() {
+  const groups = [
+    { title: 'Vakbladen & nieuws', sources: SOURCES.filter(s => s.tag === 'news') },
+    { title: 'Regelgeving & beleid', sources: SOURCES.filter(s => s.tag === 'policy') },
+    { title: 'Tech & energie', sources: [...SOURCES.filter(s => ['tech','energy','safety'].includes(s.tag)), ...customFeeds] },
+  ];
+  document.getElementById('sources-grid').innerHTML = groups.map(g => `
+    <div class="sidebar-card">
+      <div class="sidebar-title">${g.title}</div>
+      ${g.sources.map((s, i) => `
+        <div class="source-row-manage">
+          <div class="src-dot" style="background:${s.color}"></div>
+          <div style="flex:1">
+            <div class="src-manage-name">${s.name}</div>
+            <div class="src-manage-url">${s.url.replace('https://','').split('/')[0]}</div>
+          </div>
+          <button class="toggle ${sourceStates[s.name] !== false ? 'on' : ''}"
+            onclick="toggleSource('${s.name}', this, ${s.url.includes('custom') || customFeeds.includes(s)})">
+          </button>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+function toggleSource(name, btn, isCustom) {
+  sourceStates[name] = sourceStates[name] === false ? true : false;
+  btn.classList.toggle('on', sourceStates[name] !== false);
+  localStorage.setItem('sourceStates', JSON.stringify(sourceStates));
+}
+
+function addCustomFeed() {
+  const name = document.getElementById('new-name').value.trim();
+  const url  = document.getElementById('new-url').value.trim();
+  const tag  = document.getElementById('new-tag').value;
+  if (!name || !url) { alert('Vul naam en URL in.'); return; }
+  const colors = { news:'#4a9ed6', tech:'#a080e0', policy:'#e87060', energy:'#2ecc71', safety:'#f0a830' };
+  customFeeds.push({ name, url, tag, color: colors[tag], on: true });
+  localStorage.setItem('customFeeds', JSON.stringify(customFeeds));
+  document.getElementById('new-name').value = '';
+  document.getElementById('new-url').value = '';
+  renderSourcesPage();
+  loadFeeds();
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+  if (id === 'nieuwsbrief') renderDraft();
+}
+
+// ── START ─────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
