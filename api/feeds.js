@@ -41,7 +41,7 @@ function parseRSS(xml, source) {
       });
     }
   }
-  return items.slice(0, 8);
+  return items.slice(0, 50);
 }
 
 export default async function handler(req, res) {
